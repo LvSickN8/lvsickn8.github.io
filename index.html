@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solace的后花园</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #9370DB;
+            --glass-bg: rgba(255, 255, 255, 0.60);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --text-main: #5e5e5e;
+            --text-sub: #888;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(120deg, #f3e7e9 0%, #e3eeff 50%, #e8dff5 100%);
+            background-size: 200% 200%;
+            animation: gradientMove 15s ease infinite;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 20px 20px 40px 20px;
+            overflow-x: hidden;
+            position: relative;
+            perspective: 1200px; 
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 胶片噪点纹理 */
+        body::before {
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.4; pointer-events: none; z-index: 999; mix-blend-mode: overlay;
+        }
+
+        /* 雪花特效 */
+        #snow-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: hidden; filter: blur(0.5px); }
+        .snowflake {
+            position: absolute; top: -50px; border-radius: 50%; pointer-events: none;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(255,255,255,0.4) 60%, rgba(255,255,255,0) 100%);
+            box-shadow: 0 0 4px 1px rgba(164, 145, 211, 0.2);
+            will-change: transform;
+            animation-name: snowfall-drop, snowfall-sway, snowfall-rotate;
+            animation-timing-function: linear, ease-in-out, linear;
+            animation-iteration-count: infinite;
+            animation-direction: normal, alternate, normal;
+        }
+        @keyframes snowfall-drop { 0% { top: -10%; opacity: 0; } 10% { opacity: var(--flake-opacity); } 90% { opacity: var(--flake-opacity); } 100% { top: 110%; opacity: 0; } }
+        @keyframes snowfall-sway { from { transform: translateX(calc(-1 * var(--sway-range))); } to { transform: translateX(var(--sway-range)); } }
+        @keyframes snowfall-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* --- 主卡片容器 --- */
+        .container {
+            position: relative; width: 100%; max-width: 420px;
+            background: var(--glass-bg); 
+            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border); border-radius: 30px;
+            /* 修正 Padding，底部留出足够空间给文字 */
+            padding: 0 2rem 3rem 2rem;
+            box-shadow: 0 40px 80px rgba(147, 112, 219, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+            text-align: center; 
+            overflow: hidden; 
+            transform-style: preserve-3d;
+            will-change: transform;
+            z-index: 10;
+        }
+        
+        .header-section { 
+            position: relative; padding: 3.5rem 1rem 2.5rem 1rem; margin-left: -2rem; margin-right: -2rem; margin-bottom: 1.5rem;
+            background: radial-gradient(circle at top, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 70%);
+            transform: translateZ(25px); pointer-events: none; 
+        }
+        
+        .header-decoration { 
+            position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.6; z-index: -1; 
+            animation: floatBlob 10s ease-in-out infinite alternate;
+            will-change: transform; backface-visibility: hidden;
+        }
+        .blob-1 { top: -50px; left: -20%; width: 220px; height: 220px; background: rgba(147, 112, 219, 0.5); }
+        .blob-2 { top: -80px; right: -20%; width: 260px; height: 260px; background: rgba(233, 64, 87, 0.3); animation-delay: -5s; }
+        @keyframes floatBlob { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(20px, 30px) scale(1.1); } }
+        
+        .title-en { 
+            font-family: 'Playfair Display', serif; font-size: 3.8rem; font-weight: 600; font-style: italic; 
+            background: linear-gradient(45deg, #6a11cb, #2575fc, #9370DB); -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+            line-height: 1; position: relative; z-index: 2; 
+            text-shadow: 0 10px 20px rgba(147, 112, 219, 0.15); 
+            -webkit-font-smoothing: antialiased; backface-visibility: hidden;
+        }
+        .title-zh { 
+            font-size: 1.1rem; letter-spacing: 6px; color: var(--text-sub); text-transform: uppercase; font-weight: 300; margin-top: 10px; position: relative; z-index: 2; 
+            -webkit-font-smoothing: antialiased; backface-visibility: hidden;
+        }
+        
+        .grid-links { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; position: relative; z-index: 2; transform: translateZ(35px); }
+        .full-width { grid-column: span 2; }
+        
+        .btn { 
+            display: flex; align-items: center; justify-content: center; padding: 15px; 
+            background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 20px; 
+            color: var(--text-main); text-decoration: none; font-size: 0.9rem; font-weight: 500; 
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); cursor: pointer; backdrop-filter: blur(8px); 
+            overflow: hidden; white-space: nowrap; text-overflow: ellipsis; position: relative;
+            transform: translateZ(0); 
+        }
+        .btn::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(120deg, transparent, rgba(255,255,255,0.4), transparent);
+            transform: translateX(-100%); transition: 0.6s;
+        }
+        .btn:hover::after { transform: translateX(100%); }
+        .btn:hover { background: #fff; transform: translateY(-3px) scale(1.02); box-shadow: 0 15px 35px rgba(147, 112, 219, 0.2); color: var(--primary-color); border-color: #fff; }
+        .btn:active { transform: scale(0.98); }
+        .btn svg { min-width: 18px; width: 18px; height: 18px; margin-right: 8px; fill: var(--text-sub); transition: fill 0.3s ease; }
+        .btn:hover svg { fill: var(--primary-color); }
+        
+        /* 底部文字修复 */
+        .footer { 
+            margin-top: 2.5rem; /* 稍微减小间距 */
+            font-size: 0.75rem; 
+            /* 加深颜色，确保可见 */
+            color: rgba(147, 112, 219, 0.8); 
+            letter-spacing: 2px;
+            font-weight: 500;
+            position: relative;
+            z-index: 20; /* 提升层级，防止被遮挡 */
+            transform: translateZ(10px);
+        }
+        
+        #toast { visibility: hidden; min-width: 200px; background-color: rgba(147, 112, 219, 0.9); color: #fff; text-align: center; border-radius: 50px; padding: 12px; position: fixed; z-index: 100; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 0.9rem; backdrop-filter: blur(10px); opacity: 0; transition: opacity 0.3s, bottom 0.3s; box-shadow: 0 5px 15px rgba(147, 112, 219, 0.3); }
+        #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+    </style>
+</head>
+<body>
+
+    <div id="snow-container"></div>
+
+    <div class="container" id="tilt-card">
+        <div class="header-section">
+            <div class="header-decoration blob-1"></div>
+            <div class="header-decoration blob-2"></div>
+            <div class="title-en">Solace</div>
+            <div class="title-zh">的后花园</div>
+        </div>
+
+        <div class="grid-links">
+            <a href="tel:+15134528504" class="btn full-width">
+                <svg viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-2.2 2.2a15.05 15.05 0 0 1-6.59-6.59l2.2-2.21a.96.96 0 0 0 .25-1.01A11.36 11.36 0 0 1 8.59 3.99c0-.55-.45-1-1-1H4.39c-.55 0-1 .45-1 1c0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.61c0-.55-.45-1-1-1z"/></svg>
+                +1 5134528504
+            </a>
+            <a href="https://t.me/S_ohye" target="_blank" class="btn full-width">
+                <svg viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.638z"/></svg>
+                Telegram: S_ohye
+            </a>
+            <a href="https://signal.me/#u/S_ohye.01" target="_blank" class="btn">
+                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM12 13c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+                Signal (01)
+            </a>
+            <a href="https://signal.me/#u/S_ohye.02" target="_blank" class="btn">
+                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM12 13c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+                Signal (02)
+            </a>
+            <div class="btn" onclick="copyText('S_ohye', '微信: S_ohye 已复制')">
+                <svg viewBox="0 0 24 24"><path d="M8.5 2C4.9 2 2 4.5 2 7.6c0 1.7.9 3.3 2.3 4.3-.1.6-.5 1.7-1 2.2 0 0 1.2.1 2.6-.7.7.2 1.4.3 2.1.3h.5c-.2-.6-.3-1.2-.3-1.9 0-3.6 3.4-6.5 7.6-6.5.6 0 1.1 0 1.7.1C16.3 3.3 12.6 2 8.5 2z"/></svg>
+                S_ohye
+            </div>
+            <div class="btn" onclick="copyText('GS_ohye', '微信: GS_ohye 已复制')">
+                <svg viewBox="0 0 24 24"><path d="M8.5 2C4.9 2 2 4.5 2 7.6c0 1.7.9 3.3 2.3 4.3-.1.6-.5 1.7-1 2.2 0 0 1.2.1 2.6-.7.7.2 1.4.3 2.1.3h.5c-.2-.6-.3-1.2-.3-1.9 0-3.6 3.4-6.5 7.6-6.5.6 0 1.1 0 1.7.1C16.3 3.3 12.6 2 8.5 2z"/></svg>
+                GS_ohye
+            </div>
+            <div class="btn" onclick="copyText('XS_ohye', '微信: XS_ohye 已复制')">
+                <svg viewBox="0 0 24 24"><path d="M8.5 2C4.9 2 2 4.5 2 7.6c0 1.7.9 3.3 2.3 4.3-.1.6-.5 1.7-1 2.2 0 0 1.2.1 2.6-.7.7.2 1.4.3 2.1.3h.5c-.2-.6-.3-1.2-.3-1.9 0-3.6 3.4-6.5 7.6-6.5.6 0 1.1 0 1.7.1C16.3 3.3 12.6 2 8.5 2z"/></svg>
+                XS_ohye
+            </div>
+            <div class="btn" onclick="copyText('LSD_Awaits', '微信: LSD_Awaits 已复制')">
+                <svg viewBox="0 0 24 24"><path d="M8.5 2C4.9 2 2 4.5 2 7.6c0 1.7.9 3.3 2.3 4.3-.1.6-.5 1.7-1 2.2 0 0 1.2.1 2.6-.7.7.2 1.4.3 2.1.3h.5c-.2-.6-.3-1.2-.3-1.9 0-3.6 3.4-6.5 7.6-6.5.6 0 1.1 0 1.7.1C16.3 3.3 12.6 2 8.5 2z"/></svg>
+                LSD_Awaits
+            </div>
+            <div class="btn" onclick="copyText('126483921', 'QQ: 126483921 已复制')">
+                <svg viewBox="0 0 24 24"><path d="M11.99 1.89c-2.8 0-5.15 2.13-5.15 4.88l-2.4-.01c-.82 0-1.49.67-1.49 1.49 0 .61.38 1.15.91 1.38l-.33.7c-1.05 2.22-.46 4.93 1.38 6.55l-.81 2.65c-.1.31.13.63.46.63.18 0 .34-.1.42-.26L5.96 18c1.29 1.13 2.96 1.81 4.79 1.85h2.49c1.83-.04 3.51-.72 4.79-1.85l.97 1.84c.08.16.24.26.42.26.33 0 .55-.32.46-.63l-.81-2.65c1.84-1.63 2.44-4.33 1.38-6.55l-.33-.7c.53-.23.91-.77.91-1.38 0-.82-.67-1.49-1.49-1.49l-2.4.01c0-2.75-2.35-4.88-5.15-4.88zm.01 3.6c1.51 0 2.75 1.24 2.75 2.75v2.55h-5.5V8.24c0-1.51 1.24-2.75 2.75-2.75z"/></svg>
+                QQ (1)
+            </div>
+            <div class="btn" onclick="copyText('2077404346', 'QQ: 2077404346 已复制')">
+                <svg viewBox="0 0 24 24"><path d="M11.99 1.89c-2.8 0-5.15 2.13-5.15 4.88l-2.4-.01c-.82 0-1.49.67-1.49 1.49 0 .61.38 1.15.91 1.38l-.33.7c-1.05 2.22-.46 4.93 1.38 6.55l-.81 2.65c-.1.31.13.63.46.63.18 0 .34-.1.42-.26L5.96 18c1.29 1.13 2.96 1.81 4.79 1.85h2.49c1.83-.04 3.51-.72 4.79-1.85l.97 1.84c.08.16.24.26.42.26.33 0 .55-.32.46-.63l-.81-2.65c1.84-1.63 2.44-4.33 1.38-6.55l-.33-.7c.53-.23.91-.77.91-1.38 0-.82-.67-1.49-1.49-1.49l-2.4.01c0-2.75-2.35-4.88-5.15-4.88zm.01 3.6c1.51 0 2.75 1.24 2.75 2.75v2.55h-5.5V8.24c0-1.51 1.24-2.75 2.75-2.75z"/></svg>
+                QQ (2)
+            </div>
+            <div class="btn" onclick="copyText('zkaydhl@gmail.com', '邮箱 1 已复制')">
+                <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                Email (1)
+            </div>
+            <div class="btn" onclick="copyText('baoxbing@gmail.com', '邮箱 2 已复制')">
+                <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                Email (2)
+            </div>
+        </div>
+
+        <div class="footer">
+            Design for Solace © 2026
+        </div>
+    </div>
+
+    <div id="toast">已复制到剪贴板</div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const snowContainer = document.getElementById('snow-container');
+            const snowflakeCount = 50; 
+            for (let i = 0; i < snowflakeCount; i++) {
+                let snowflake = document.createElement('div');
+                snowflake.className = 'snowflake';
+                let size = Math.random() * 6 + 3; 
+                snowflake.style.width = `${size}px`; snowflake.style.height = `${size}px`;
+                let blurAmount = (9 - size) * 0.6; 
+                snowflake.style.filter = `blur(${blurAmount}px)`;
+                snowflake.style.left = `${Math.random() * 100}vw`;
+                let opacity = (size / 9) * 0.6 + 0.2; 
+                snowflake.style.setProperty('--flake-opacity', opacity);
+                let duration = (10 - size) * 2 + 10; 
+                let swayRange = Math.random() * 40 + 20 + 'px'; 
+                snowflake.style.setProperty('--sway-range', swayRange);
+                let delay = Math.random() * -duration; 
+                snowflake.style.animationDuration = `${duration}s, ${duration * (Math.random()*0.5 + 1)}s, ${duration * (Math.random() + 1)}s`;
+                snowflake.style.animationDelay = `${delay}s, ${delay}s, ${delay}s`;
+                snowContainer.appendChild(snowflake);
+            }
+        });
+
+        const card = document.getElementById('tilt-card');
+        document.addEventListener('mousemove', (e) => {
+            if(window.innerWidth > 768) {
+                const x = (window.innerWidth / 2 - e.pageX) / 25;
+                const y = (window.innerHeight / 2 - e.pageY) / 25;
+                card.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
+            }
+        });
+        window.addEventListener('deviceorientation', (e) => {
+            if(window.innerWidth <= 768) {
+                const tiltX = (e.gamma) / 4; 
+                const tiltY = (e.beta - 45) / 4; 
+                card.style.transform = `rotateY(${tiltX}deg) rotateX(${-tiltY}deg)`;
+            }
+        });
+
+        function copyText(text, msg) { if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(function() { showToast(msg); }, function(err) { fallbackCopyText(text, msg); }); } else { fallbackCopyText(text, msg); } }
+        function fallbackCopyText(text, msg) { var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px"; document.body.appendChild(ta); ta.focus(); ta.select(); try { var successful = document.execCommand('copy'); if(successful) showToast(msg); } catch (err) {} document.body.removeChild(ta); }
+        function showToast(message) { var toast = document.getElementById("toast"); toast.innerText = message; toast.className = "show"; setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000); }
+    </script>
+</body>
+</html>
